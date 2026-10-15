@@ -75,6 +75,9 @@
     } else node.style.boxShadow = "";
     const face = TYPEFACES[region.font] || TYPEFACES[TYPE_DEFAULT[region.id]];
     if (face) node.style.fontFamily = face;
+    const size = Number(region.fontSize);
+    if (Number.isFinite(size) && size >= 8) node.style.fontSize = Math.min(96, Math.round(size)) + "px";
+    else node.style.fontSize = "";
     if (region.align === "left" || region.align === "center" || region.align === "right") {
       node.style.textAlign = region.align;
       node.classList.toggle("align-center", region.align === "center");

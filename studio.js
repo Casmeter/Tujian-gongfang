@@ -343,7 +343,8 @@
       stroke: !!region.stroke,
       strokeColor: cssColor(region.strokeColor, "#1b2430"),
       shadow: !!region.shadow,
-      shadowSize: clamp(num(region.shadowSize, 12), 0, 40)
+      shadowSize: clamp(num(region.shadowSize, 12), 0, 40),
+      fontSize: clamp(Math.round(num(region.fontSize, 0)), 0, 96)
     };
   }
   function toast(message) {
@@ -1350,6 +1351,32 @@
     return select;
   }
 
+  function fontSizeControl(region, plate) {
+    const fallback = { hero: 64, brand: 18, lead: 18, title: 22, fields: 13, body: 14, extra1: 14, extra2: 14, extra3: 14 }[region.id] || 16;
+    const saved = Number(region.fontSize);
+    const wrap = document.createElement("label");
+    wrap.className = "tool-slide";
+    const text = document.createElement("span");
+    text.textContent = t("tool.size");
+    const input = document.createElement("input");
+    input.type = "range";
+    input.min = "8";
+    input.max = "96";
+    input.value = String(clamp(Number.isFinite(saved) && saved >= 8 ? saved : fallback, 8, 96));
+    input.setAttribute("aria-label", t("tool.size"));
+    const numNode = document.createElement("span");
+    numNode.className = "tool-num";
+    numNode.textContent = input.value;
+    input.addEventListener("input", () => {
+      region.fontSize = Number(input.value);
+      numNode.textContent = input.value;
+      livePaint(plate, region);
+      scheduleSave();
+    });
+    wrap.append(text, input, numNode);
+    return wrap;
+  }
+
   function alignControl(region, plate) {
     const wrap = document.createElement("span");
     wrap.className = "tool-align";
@@ -1382,7 +1409,7 @@
     name.textContent = regionLabel(region.id) || meta.find((entry) => entry.id === region.id)?.label || "模块";
     bar.append(toolSep(), name);
     if (TEXT_IDS[region.id]) {
-      bar.append(fontControl(region, plate), alignControl(region, plate));
+      bar.append(fontControl(region, plate), fontSizeControl(region, plate), alignControl(region, plate));
     }
     bar.append(checkAndColor(region, plate, "fillOn", "fill", t("tool.fill"), "#ffffff"));
     bar.append(checkAndColor(region, plate, "stroke", "strokeColor", t("tool.stroke"), "#1b2430"));
@@ -2877,6 +2904,20 @@
     downloadBlob(new Blob([csv], { type: "text/csv;charset=utf-8" }), t("file.csv"));
   }
 
+  async function makeSampleItem() {
+    await document.fonts.ready;
+    const spec = SAMPLES[0];
+    const cover = await drawCostume(spec, "1");
+    const item = blankItem();
+    item.sample = true;
+    item.title = "【图鉴示例】";
+    item.body = "【填写简单介绍】";
+    item.cover = await storeBlob(cover, "jpg");
+    if (state.project.fields.some((field) => field.name === "分组")) item.fields["分组"] = "【填写分组关键词】";
+    if (state.project.fields.some((field) => field.name === "年份")) item.fields["年份"] = spec.year;
+    return item;
+  }
+
   async function toggleSamples() {
     if (state.project.items.some((item) => item.sample)) {
       state.project.items = state.project.items.filter((item) => !item.sample);
@@ -2887,26 +2928,13 @@
       toast(t("toast.sampleGone"));
       return;
     }
-    await document.fonts.ready;
     toast(t("toast.sampleDraw"));
-    const made = [];
-    for (let i = 0; i < SAMPLES.length; i++) {
-      const spec = SAMPLES[i];
-      const cover = await drawCostume(spec, String(i + 1));
-      const item = blankItem();
-      item.sample = true;
-      item.title = "【图鉴示例】";
-      item.body = "【填写简单介绍】";
-      item.cover = await storeBlob(cover, "jpg");
-      if (state.project.fields.some((field) => field.name === "分组")) item.fields["分组"] = "【填写分组关键词】";
-      if (state.project.fields.some((field) => field.name === "年份")) item.fields["年份"] = spec.year;
-      made.push(item);
-    }
-    state.project.items.push(...made);
-    state.selectedId = made[0].id;
+    const item = await makeSampleItem();
+    state.project.items.push(item);
+    state.selectedId = item.id;
     await persistProject();
     paintContent();
-    toast(t("toast.sampleIn", { n: made.length }));
+    toast(t("toast.sampleIn", { n: 1 }));
   }
 
   function drawCostume(spec, mark) {
@@ -3343,15 +3371,36 @@
     importFileList(files).catch((err) => toast(err.message || t("toast.importFail")));
   }
 
+  function welcomeNeeded() {
+    try { return localStorage.getItem("catalog-studio-welcomed") !== "1"; }
+    catch (err) { return false; }
+  }
+
+  function markWelcomed() {
+    try { localStorage.setItem("catalog-studio-welcomed", "1"); }
+    catch (err) { /* 隐私模式可能拒绝写入 */ }
+  }
+
   async function init() {
     bindStatic();
+    let fresh = false;
     try {
       const saved = await idbGet("kv", "project");
-      state.project = saved ? normalize(saved) : defaultProject();
-      state.assets = await loadAssets();
+      if (saved) {
+        state.project = normalize(saved);
+        state.assets = await loadAssets();
+      } else {
+        fresh = true;
+        state.project = defaultProject();
+        state.assets = new Map();
+        const item = await makeSampleItem();
+        state.project.items = [item];
+        state.selectedId = item.id;
+        await persistProject();
+      }
     } catch (err) {
       state.memory = true;
-      state.project = defaultProject();
+      if (!state.project) state.project = defaultProject();
       toast(t("toast.memory"));
     }
     if (location.protocol === "file:") {
@@ -3359,6 +3408,10 @@
     }
     Catalog.applyUserCss(state.project);
     showTab("cabinet");
+    if (welcomeNeeded()) {
+      markWelcomed();
+      openGuide(0, "help");
+    }
   }
 
   init();
