@@ -76,14 +76,28 @@ body {
   box-shadow: var(--shade), inset 0 -2px 0 #d63c3c;
 }
 
-.spacer { flex: 1; }
+.spacer { flex: 1 1 auto; min-width: 12px; }
+.top-end {
+  margin-left: auto;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px 12px;
+  max-width: 100%;
+}
 .save-state {
   font-family: "IBM Plex Mono", ui-monospace, monospace;
   font-size: 11px;
   color: #5c6b7a;
   white-space: nowrap;
 }
-.top-actions { display: flex; gap: 8px; }
+.top-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
 
 .btn, .btn-export, .btn-quiet {
   font: inherit;

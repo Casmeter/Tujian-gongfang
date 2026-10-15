@@ -786,15 +786,17 @@
           '<button type="button" data-tab-btn="preview" role="tab"></button>' +
         "</div>" +
         '<div class="spacer"></div>' +
-        '<span class="save-state"></span>' +
-        '<div class="top-actions">' +
-          '<button type="button" class="btn" id="lang-toggle"></button>' +
-          '<button type="button" class="btn" id="open-backup"></button>' +
-          '<button type="button" class="btn" id="save-backup"></button>' +
-          '<button type="button" class="btn" id="open-help"></button>' +
-          '<button type="button" class="btn" id="open-guide"></button>' +
-          '<button type="button" class="btn" id="open-tip"></button>' +
-          '<button type="button" class="btn-export" id="export-site"></button>' +
+        '<div class="top-end">' +
+          '<span class="save-state"></span>' +
+          '<div class="top-actions">' +
+            '<button type="button" class="btn" id="lang-toggle"></button>' +
+            '<button type="button" class="btn" id="open-backup"></button>' +
+            '<button type="button" class="btn" id="save-backup"></button>' +
+            '<button type="button" class="btn" id="open-help"></button>' +
+            '<button type="button" class="btn" id="open-guide"></button>' +
+            '<button type="button" class="btn" id="open-tip"></button>' +
+            '<button type="button" class="btn-export" id="export-site"></button>' +
+          "</div>" +
         "</div>" +
       "</header>" +
       '<div class="work"><aside class="panel" id="panel"></aside><main class="stage" id="stage"></main></div>' +
