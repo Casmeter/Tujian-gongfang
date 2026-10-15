@@ -234,14 +234,12 @@
       "guide.3.body": "<p>这是静态网页，不需要数据库，也不需要安装语言环境。</p><ol><li>虚拟主机：用 FTP 或主机面板，把解压出来的文件传到网站根目录。</li><li>Cloudflare Pages 或 Netlify：新建站点，把解压后的文件夹拖进去，或连到放了这些文件的 Git 仓库。</li><li>自己的服务器：把文件放到网站目录，Nginx 或 Caddy 指向 index.html 即可。</li></ol><p>用浏览器直接打开解压后的 index.html，可以先在这台电脑上预览。发给别人时请自己学习如何发布。</p>",
       "guide.4.title": "发布前检查项",
       "guide.4.body": "<p>打开网址，看主页、展柜、索引或年表是否是你要的。试一下搜索，以及分组、年份筛选。点开具体条目看封面和细节图是否都正常。</p>",
-      "help.1.title": "四个分页",
-      "help.1.body": "<p>展柜样式定制管所有卡片共用的样子。主页样式定制管打开网站的第一眼。展柜内容管理管每一条的图和字。预览用来看电脑和手机上的成品。</p>",
-      "help.2.title": "画布上的框",
-      "help.2.body": "<p>点「选中」，再点一个框，它会亮起来。点「移动」，才能拖框的位置。框角上的小块用来改大小。选中文字框后，工具栏可以改字体和字号。滚轮缩放画布，点百分比回到 100%。四角的红标改的是整张卡片的比例，主页的格子会跟着变。</p>",
-      "help.3.title": "裁图片",
-      "help.3.body": "<p>在展柜样式定制里点中「图」，横条上点「编辑图片裁剪」。九宫格里拖动可以移动露出的位置，滚轮或滑杆可以放大缩小。共用这套版式的卡片会露出同一块。</p><p>某一条想不一样，到展柜内容管理里选中它，同样打开裁剪。这条如果勾了单独布局，裁切只留在这一条上。点「回到居中」就回到正中。</p><p>拖标题、字段、简介这些文本框时，边上和中线会对齐，出现红色虚线。</p>",
-      "help.4.title": "条目怎么进来",
-      "help.4.body": "<p>可以导入图片、文件夹或表格，也可以先放入图鉴示例看看排版。字段名会出现在格子和详情里。</p><p>附注默认关着，打开后才能填，而且不会被搜到。勾选「这一条使用独立的图文布局」之后，才能单独拖这一条的框。编辑图片裁剪不用勾这一项。</p>"
+      "help.1.title": "工作区",
+      "help.1.body": "<p>在展柜样式定制可以修改展示卡片的样式。</p><p>在主页样式定制可以修改整个网站的版式。</p><p>如果需要详细编辑和批量管理卡片展示内容，点击【展柜内容管理】。</p><p>点击预览可以观看电脑和手机上的效果（预览效果不一定准！）。</p>",
+      "help.2.title": "操作画布上的对象",
+      "help.2.body": "<p>点「选中」，再点文本框或图片可以进行样式修改。</p><p>点「移动」，才能拖拽对象的位置。拉动框右下角的方块可以改变对象大小。</p><p>选中文字框后，工具栏可以改字体和字号。拖拽四角的红标可以修改整张卡片的比例。</p>",
+      "help.3.title": "具体的条目编辑",
+      "help.3.body": "<p>在展柜内容管理里可以批量创建条目。可以导入图片、文件夹或表格。这里有一条图鉴示例，方便你看看排版。</p><p>勾选「这一条使用独立的图文布局」之后，可以单独编辑这一条的框对象。</p>"
     },
     en: {
       "brand.tagline": "Lay it out on this computer. After export, publish it your own way.",
@@ -477,14 +475,12 @@
       "guide.3.body": "<p>This is a static site. It does not need a database or a programming language installed.</p><ol><li>Shared hosting: use FTP or the host’s panel, and put the unzipped files in the site root.</li><li>Cloudflare Pages or Netlify: create a site and drop in the unzipped folder, or connect a Git repository that already has these files.</li><li>Your own server: put the files in the web folder and point Nginx or Caddy at index.html.</li></ol><p>You can open the unzipped index.html in a browser to look at it on this computer. To send it to someone else, learn a way to publish it.</p>",
       "guide.4.title": "Check before you publish",
       "guide.4.body": "<p>Open the address and see whether the homepage, grid, index, or timeline is what you wanted. Try search, and the group and year filters. Open an entry and check that the cover and detail images look right.</p>",
-      "help.1.title": "Four tabs",
-      "help.1.body": "<p>Card style is the look shared by every card. Homepage is the first thing people see. Entries holds each picture and its words. Preview shows the result on a computer and on a phone.</p>",
-      "help.2.title": "Boxes on the canvas",
-      "help.2.body": "<p>Choose Select, then click a box to highlight it. Choose Move before you can drag a box. The small corner handle changes its size. With a text box selected, the toolbar can change the font and the size. Scroll to zoom the canvas, and click the percentage to return to 100%. The red corner marks change the whole card’s ratio, and the homepage grid follows.</p>",
-      "help.3.title": "Crop a picture",
-      "help.3.body": "<p>In Card style, select Image, then choose Edit crop. Drag inside the grid to move what shows, and scroll or use the slider to zoom. Every card that shares this layout shows the same part.</p><p>To crop one card differently, open it under Entries and use Edit crop there too. If that card uses its own layout, the crop stays on that card. Center puts it back in the middle.</p><p>While you drag a title, fields, or text box, red dashed lines appear when an edge or a center lines up.</p>",
-      "help.4.title": "Where entries come from",
-      "help.4.body": "<p>Import pictures, a folder, or a spreadsheet. Or drop in the sample cards and look at the layout first. Field names show up in the cards and on the detail page.</p><p>Notes stay off until you turn them on. They can be filled in, and they are not searchable. Check “this card uses its own layout” before you can drag that card’s boxes. Edit crop does not need that checkbox.</p>"
+      "help.1.title": "Workspace",
+      "help.1.body": "<p>Card style changes how the display cards look.</p><p>Homepage changes the layout of the whole site.</p><p>To edit entries in detail, or manage them in batches, open Entries.</p><p>Preview shows the result on a computer and on a phone (the preview is not always exact).</p>",
+      "help.2.title": "Objects on the canvas",
+      "help.2.body": "<p>Choose Select, then click a text box or a picture to change its style.</p><p>Choose Move before you can drag an object. Pull the square at the lower right to resize it.</p><p>With a text box selected, the toolbar can change the font and the size. Drag the red marks at the four corners to change the whole card’s ratio.</p>",
+      "help.3.title": "Editing an entry",
+      "help.3.body": "<p>Under Entries you can create entries in batches. You can import pictures, a folder, or a spreadsheet. One sample card is already here so you can see the layout.</p><p>Check “this card uses its own layout” to edit that card’s boxes on its own.</p>"
     }
   };
 

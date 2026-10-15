@@ -3214,7 +3214,8 @@
 
   function guidePages() {
     const prefix = guideKind === "help" ? "help" : "guide";
-    return [1, 2, 3, 4].map((n) => ({
+    const pages = guideKind === "help" ? [1, 2, 3] : [1, 2, 3, 4];
+    return pages.map((n) => ({
       title: t(prefix + "." + n + ".title"),
       body: t(prefix + "." + n + ".body")
     }));
