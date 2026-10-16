@@ -88,6 +88,21 @@
     }
   }
 
+  function frameImage(img, focus) {
+    const x = Number(focus && focus.x);
+    const y = Number(focus && focus.y);
+    const scale = Number(focus && focus.scale);
+    const fx = Number.isFinite(x) ? Math.min(100, Math.max(0, x)) : 50;
+    const fy = Number.isFinite(y) ? Math.min(100, Math.max(0, y)) : 50;
+    const fs = Number.isFinite(scale) ? Math.min(3, Math.max(1, scale)) : 1;
+    const extra = focus && focus.blur ? 1.14 : 1;
+    const drawn = fs * extra;
+    img.style.objectPosition = fx + "% " + fy + "%";
+    img.style.transformOrigin = fx + "% " + fy + "%";
+    img.style.transform = drawn > 1.001 ? "scale(" + drawn + ")" : "";
+    img.style.filter = focus && focus.blur ? "blur(18px)" : "";
+  }
+
   function applyPageSkin(head, project, resolve) {
     const site = project.site || {};
     const radius = Math.min(48, Math.max(0, Number(site.radius) || 0));
@@ -99,18 +114,24 @@
       head.style.overflow = radius ? "hidden" : "";
       return;
     }
-    if (!wash) {
-      wash = el("div", { class: "page-bg" });
-      head.prepend(wash);
-    }
+    if (!wash) wash = el("div", { class: "page-bg" });
+    head.append(wash);
+    const fade = Number(site.bgOpacity);
+    wash.style.opacity = String((Number.isFinite(fade) ? Math.min(100, Math.max(0, fade)) : 100) / 100);
     wash.classList.toggle("is-dark", site.veil === "dark");
     wash.classList.toggle("is-blur", site.veil === "blur");
     let img = wash.querySelector("img");
     if (!img) {
       img = el("img", { alt: "" });
-      wash.prepend(img);
+      wash.append(img);
     }
     if (img.getAttribute("src") !== src) img.setAttribute("src", src);
+    frameImage(img, {
+      x: site.bgFocusX,
+      y: site.bgFocusY,
+      scale: site.bgFocusScale,
+      blur: site.veil === "blur"
+    });
     head.style.overflow = "hidden";
   }
 
@@ -464,7 +485,14 @@
         }
       } else if (region.id === "visual") {
         const src = coverSrc(project, resolve);
-        block.append(src ? el("img", { src: src, alt: "" }) : el("div", { class: "ph", "aria-hidden": "true" }));
+        if (src) {
+          const img = el("img", { src: src, alt: "" });
+          const site = project.site || {};
+          frameImage(img, { x: site.visualFocusX, y: site.visualFocusY, scale: site.visualFocusScale });
+          block.append(img);
+        } else {
+          block.append(el("div", { class: "ph" + (project.site && project.site.bg ? " is-clear" : ""), "aria-hidden": "true" }));
+        }
       } else if (opts.live) {
         block.append(buildTools(project, opts));
       } else {
@@ -590,7 +618,8 @@
       { id: "back", x: 52, y: 0, w: 22, h: 8, z: 4, align: "left" },
       { id: "title", x: 52, y: 12, w: 46, h: 16, z: 3, align: "left" },
       { id: "fields", x: 52, y: 30, w: 42, h: 20, z: 2, align: "left" },
-      { id: "body", x: 52, y: 52, w: 46, h: 36, z: 2, align: "left" }
+      { id: "body", x: 52, y: 52, w: 46, h: 36, z: 2, align: "left" },
+      { id: "pager", x: 52, y: 90, w: 46, h: 8, z: 5, align: "left" }
     ];
     const raw = project.site && project.site.detail && project.site.detail.regions;
     const list = Array.isArray(raw) ? raw : [];
@@ -598,6 +627,25 @@
       const found = list.find((region) => region && region.id === fallback.id);
       return found ? Object.assign({}, fallback, found) : fallback;
     });
+  }
+
+  function neighborItems(project, opts) {
+    const items = project.items || [];
+    const filters = opts && opts.filters;
+    if (!filters) return items;
+    const active = String(filters.q || "").trim() || filters.group || filters.year;
+    if (!active) return items;
+    const shown = items.filter((item) => matches(item, project, filters));
+    return shown.length ? shown : items;
+  }
+
+  function centerDetail() {
+    const stage = document.querySelector(".detail-stage");
+    if (!stage) return;
+    const rect = stage.getBoundingClientRect();
+    const viewHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+    const block = rect.height > viewHeight - 32 ? "start" : "center";
+    stage.scrollIntoView({ block: block, inline: "nearest" });
   }
 
   function renderDetail(project, item, resolve, opts) {
@@ -637,7 +685,24 @@
       if (opts.isolate) opts.onNavigate && opts.onNavigate(null);
       else location.hash = "#/";
     });
+    function openNeighbor(id) {
+      if (opts.edit || !id) return;
+      if (opts.isolate) {
+        if (opts.onNavigate) opts.onNavigate(id);
+      } else {
+        location.hash = "#/item/" + encodeURIComponent(id);
+      }
+      centerDetail();
+    }
+    const sequence = neighborItems(project, opts);
+    let here = -1;
+    for (let i = 0; i < sequence.length; i += 1) {
+      if (sequence[i].id === item.id) here = i;
+    }
+    const previous = here > 0 ? sequence[here - 1] : null;
+    const following = here >= 0 && here < sequence.length - 1 ? sequence[here + 1] : null;
     for (const region of detailRegions(project)) {
+      if (region.id === "pager" && !(project.site && project.site.detailPager)) continue;
       const align = region.align === "center" ? " align-center" : region.align === "right" ? " align-right" : "";
       const block = el("div", {
         class: "detail-block detail-" + region.id + align,
@@ -674,6 +739,16 @@
           const extra = String((item.notes && item.notes[id]) || "").trim();
           if (extra) block.append(el("p", { class: "prose", text: extra }));
         }
+      } else if (region.id === "pager") {
+        const row = el("div", { class: "pager-row" });
+        const prevBtn = el("button", { type: "button", class: "back", text: "上一件" });
+        const nextBtn = el("button", { type: "button", class: "back", text: "下一件" });
+        if (!opts.edit && !previous) prevBtn.disabled = true;
+        if (!opts.edit && !following) nextBtn.disabled = true;
+        prevBtn.addEventListener("click", () => openNeighbor(previous && previous.id));
+        nextBtn.addEventListener("click", () => openNeighbor(following && following.id));
+        row.append(prevBtn, nextBtn);
+        block.append(row);
       }
       stage.append(block);
     }
@@ -759,6 +834,7 @@
     overlapsImage: overlapsImage,
     paintRegion: paintRegion,
     applyPageSkin: applyPageSkin,
+    frameImage: frameImage,
     coverSrc: coverSrc,
     applyUserCss: applyUserCss
   };

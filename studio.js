@@ -124,7 +124,8 @@
     { id: "back" },
     { id: "title" },
     { id: "fields" },
-    { id: "body" }
+    { id: "body" },
+    { id: "pager" }
   ];
 
   const PAGE_PRESETS = {
@@ -242,6 +243,8 @@
     homePreset: "",
     tool: "select",
     zoom: 1,
+    panX: 0,
+    panY: 0,
     filters: { q: "", group: "", year: "" },
     saveTimer: 0,
     memory: false,
@@ -339,7 +342,7 @@
     ["mashan", "马善政"],
     ["longcang", "龙藏体"]
   ];
-  const TEXT_IDS = { brand: 1, hero: 1, lead: 1, title: 1, fields: 1, body: 1, extra1: 1, extra2: 1, extra3: 1, back: 1 };
+  const TEXT_IDS = { brand: 1, hero: 1, lead: 1, title: 1, fields: 1, body: 1, extra1: 1, extra2: 1, extra3: 1, back: 1, pager: 1 };
   const SHAPE_RATIO = { portrait: 0.75, square: 1, landscape: 1.333 };
   const FONT_HREF = "https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Long+Cang&family=Ma+Shan+Zheng&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@500;700&family=ZCOOL+KuaiLe&family=ZCOOL+QingKe+HuangYou&family=ZCOOL+XiaoWei&display=swap";
 
@@ -419,7 +422,8 @@
         { id: "back", x: 52, y: 0, w: 22, h: 8, z: 4, align: "left" },
         { id: "title", x: 52, y: 12, w: 46, h: 16, z: 3, align: "left" },
         { id: "fields", x: 52, y: 30, w: 42, h: 20, z: 2, align: "left" },
-        { id: "body", x: 52, y: 52, w: 46, h: 36, z: 2, align: "left" }
+        { id: "body", x: 52, y: 52, w: 46, h: 36, z: 2, align: "left" },
+        { id: "pager", x: 52, y: 90, w: 46, h: 8, z: 5, align: "left" }
       ]
     };
   }
@@ -431,7 +435,7 @@
     for (const region of raw) {
       if (region && region.id) byId.set(region.id, region);
     }
-    const mins = { shot: [18, 20], back: [12, 6], title: [16, 8], fields: [16, 8], body: [16, 10] };
+    const mins = { shot: [18, 20], back: [12, 6], title: [16, 8], fields: [16, 8], body: [16, 10], pager: [18, 6] };
     return {
       regions: DETAIL_META.map((meta) => {
         const region = byId.get(meta.id) || fallback.regions.find((entry) => entry.id === meta.id);
@@ -554,14 +558,22 @@
         perPage: 6,
         extras: { extra1: false, extra2: false, extra3: false },
         bg: "",
+        bgOpacity: 100,
+        bgFocusX: 50,
+        bgFocusY: 50,
+        bgFocusScale: 1,
         visualSource: "first",
         visualImage: "",
+        visualFocusX: 50,
+        visualFocusY: 50,
+        visualFocusScale: 1,
         customCss: "",
         radius: 0,
         veil: "none",
         groupField: "分组",
         orderField: "年份",
         credit: true,
+        detailPager: false,
         layout: sanitizeLayout(layoutFromPreset("stack")),
         page: pageFromPreset("center"),
         detail: detailDefaults()
@@ -625,12 +637,20 @@
       extra3: !!(site.extras && site.extras.extra3)
     };
     project.site.bg = String(site.bg || "");
+    project.site.bgOpacity = clamp(Math.round(num(site.bgOpacity, 100)), 0, 100);
+    project.site.bgFocusX = focusNumber(site.bgFocusX);
+    project.site.bgFocusY = focusNumber(site.bgFocusY);
+    project.site.bgFocusScale = focusScale(site.bgFocusScale);
     project.site.visualSource = site.visualSource === "custom" ? "custom" : "first";
     project.site.visualImage = String(site.visualImage || "");
+    project.site.visualFocusX = focusNumber(site.visualFocusX);
+    project.site.visualFocusY = focusNumber(site.visualFocusY);
+    project.site.visualFocusScale = focusScale(site.visualFocusScale);
     project.site.customCss = String(site.customCss || "").slice(0, 12000);
     project.site.radius = clamp(num(site.radius, 0), 0, 48);
     project.site.veil = site.veil === "dark" || site.veil === "blur" ? site.veil : "none";
     project.site.credit = site.credit !== false;
+    project.site.detailPager = !!site.detailPager;
     project.site.layout = sanitizeLayout(site.layout);
     project.site.page = sanitizePage(site.page);
     project.site.detail = sanitizeDetail(site.detail);
@@ -863,6 +883,9 @@
         '<header><strong id="tip-title"></strong><button type="button" class="btn-quiet" id="tip-close"></button></header>' +
         '<div class="guide-body"><p id="tip-copy"></p><a class="btn-export" id="tip-link" target="_blank" rel="noopener noreferrer"></a><p class="tip-url" id="tip-url"></p></div>' +
       "</div></div>" +
+      '<button type="button" class="edge-toggle edge-panel" id="open-panel" aria-expanded="false"></button>' +
+      '<button type="button" class="edge-toggle edge-tools" id="open-tools" aria-expanded="false"></button>' +
+      '<button type="button" class="drawer-scrim" id="drawer-scrim" hidden></button>' +
       '<input type="file" id="file-images" accept="image/*" multiple hidden>' +
       '<input type="file" id="file-csv" accept=".csv,text/csv" hidden>' +
       '<input type="file" id="file-dir" webkitdirectory multiple hidden>' +
@@ -893,6 +916,8 @@
       "tip-copy": "tip.body",
       "tip-link": "tip.open",
       "export-site": "btn.export",
+      "open-panel": "edge.panel",
+      "open-tools": "edge.tools",
       "guide-close": "guide.close",
       "guide-prev": "guide.prev"
     };
@@ -915,8 +940,20 @@
     }
   }
 
+  function setDrawer(which) {
+    document.body.classList.toggle("panel-open", which === "panel");
+    document.body.classList.toggle("tools-open", which === "tools");
+    const scrim = document.getElementById("drawer-scrim");
+    if (scrim) scrim.hidden = which !== "panel" && which !== "tools";
+    const panelBtn = document.getElementById("open-panel");
+    const toolsBtn = document.getElementById("open-tools");
+    if (panelBtn) panelBtn.setAttribute("aria-expanded", which === "panel" ? "true" : "false");
+    if (toolsBtn) toolsBtn.setAttribute("aria-expanded", which === "tools" ? "true" : "false");
+  }
+
   function showTab(tab) {
     closeCropMenu();
+    setDrawer("");
     state.tab = tab;
     document.body.dataset.tab = tab;
     for (const button of document.querySelectorAll("[data-tab-btn]")) {
@@ -1002,6 +1039,9 @@
 
   function paintHome() {
     const site = state.project.site;
+    const visualRegion = site.page.regions.find((entry) => entry.id === "visual");
+    const visualOpacity = clamp(Math.round(num(visualRegion && visualRegion.opacity, 100)), 0, 100);
+    const bgOpacity = clamp(Math.round(num(site.bgOpacity, 100)), 0, 100);
     document.getElementById("panel").innerHTML =
       '<div class="control">' +
         '<section class="slab">' +
@@ -1032,8 +1072,10 @@
           '<label class="check"><input type="checkbox" id="visual-custom"' + (site.visualSource === "custom" ? " checked" : "") + ">" + t("check.visualCustom") + "</label>" +
           '<div class="row-actions" id="visual-file-row"' + (site.visualSource === "custom" ? "" : " hidden") + ">" +
             '<button type="button" class="btn" id="visual-upload">' + (site.visualImage ? t("btn.replaceImage") : t("btn.uploadImage")) + "</button>" +
+            '<button type="button" class="btn" id="visual-crop"' + (site.visualImage ? "" : " hidden") + ">" + t("btn.cropImage") + "</button>" +
             '<button type="button" class="btn-quiet" id="visual-clear"' + (site.visualImage ? "" : " hidden") + ">" + t("btn.clearImage") + "</button>" +
           "</div>" +
+          '<label class="field" id="visual-opacity-row"' + (site.visualSource === "custom" && site.visualImage ? "" : " hidden") + "><span class=\"field-label\">" + t("label.imageOpacity") + "</span><input type=\"range\" id=\"visual-opacity\" min=\"0\" max=\"100\" value=\"" + visualOpacity + "\"><span class=\"tool-num\" id=\"visual-opacity-num\">" + visualOpacity + "</span></label>" +
           '<input type="file" id="visual-file" accept="image/*" hidden>' +
         "</div></section>" +
         '<section class="slab"><h2>' + t("h.color") + '</h2><div class="colors">' +
@@ -1042,8 +1084,12 @@
           colorField("accent", t("label.accent"), site.accent) +
         '</div><p class="hint">' + t("hint.colors") + "</p>" +
         '<div class="row-actions"><button type="button" class="btn" id="bg-upload">' + t("btn.bg") + "</button>" +
+          (site.bg ? '<button type="button" class="btn" id="bg-crop">' + t("btn.cropImage") + "</button>" : "") +
           (site.bg ? '<button type="button" class="btn-quiet" id="bg-clear">' + t("btn.bgClear") + "</button>" : "") +
-        '</div><input type="file" id="bg-file" accept="image/*" hidden>' +
+        "</div>" +
+        '<label class="field" id="bg-opacity-row"' + (site.bg ? "" : " hidden") + "><span class=\"field-label\">" + t("label.bgOpacity") + "</span><input type=\"range\" id=\"bg-opacity\" min=\"0\" max=\"100\" value=\"" + bgOpacity + "\"><span class=\"tool-num\" id=\"bg-opacity-num\">" + bgOpacity + "</span></label>" +
+        '<p class="hint">' + t("hint.bg") + "</p>" +
+        '<input type="file" id="bg-file" accept="image/*" hidden>' +
         '<label class="field"><span class="field-label">' + t("label.radius") + '</span><input type="range" id="bg-radius" min="0" max="48" value="' + clamp(num(site.radius, 0), 0, 48) + '"><span class="tool-num" id="bg-radius-num">' + clamp(num(site.radius, 0), 0, 48) + "</span></label>" +
         '<div class="veil-choices">' +
           [["none", "veil.none"], ["dark", "veil.dark"], ["blur", "veil.blur"]].map(([id, key]) =>
@@ -1128,11 +1174,63 @@
     }
   }
 
-  function openCropMenu(anchor) {
-    closeCropMenu();
+  function imageCropSpec() {
     const board = state.board;
-    if (!board) return;
-    const focus = readFocus(board.item, board.layout);
+    return {
+      read: function () { return readFocus(board.item, board.layout); },
+      write: function (x, y, scale) { return writeFocus(board.item, board.layout, x, y, scale); },
+      image: function () { return board.plate.querySelector(".region-image img"); },
+      box: function () { return board.plate.querySelector(".region-image"); },
+      paint: function (point) { paintFocus(board.plate, point); }
+    };
+  }
+
+  function visualCropSpec() {
+    const site = state.project.site;
+    return {
+      read: function () {
+        return { x: focusNumber(site.visualFocusX), y: focusNumber(site.visualFocusY), scale: focusScale(site.visualFocusScale) };
+      },
+      write: function (x, y, scale) {
+        site.visualFocusX = focusNumber(x);
+        site.visualFocusY = focusNumber(y);
+        site.visualFocusScale = focusScale(scale);
+        return { x: site.visualFocusX, y: site.visualFocusY, scale: site.visualFocusScale };
+      },
+      image: function () { return document.querySelector("#look-host .page-visual img"); },
+      box: function () { return document.querySelector("#look-host .page-visual"); },
+      paint: function (point) {
+        const node = document.querySelector("#look-host .page-visual img");
+        if (node) Catalog.frameImage(node, point);
+      }
+    };
+  }
+
+  function bgCropSpec() {
+    const site = state.project.site;
+    return {
+      read: function () {
+        return { x: focusNumber(site.bgFocusX), y: focusNumber(site.bgFocusY), scale: focusScale(site.bgFocusScale) };
+      },
+      write: function (x, y, scale) {
+        site.bgFocusX = focusNumber(x);
+        site.bgFocusY = focusNumber(y);
+        site.bgFocusScale = focusScale(scale);
+        return { x: site.bgFocusX, y: site.bgFocusY, scale: site.bgFocusScale, blur: site.veil === "blur" };
+      },
+      image: function () { return document.querySelector("#look-host .page-bg img"); },
+      box: function () { return document.querySelector("#look-host .page-head"); },
+      paint: function () {
+        const head = document.querySelector("#look-host .page-head");
+        if (head) Catalog.applyPageSkin(head, state.project, resolveAsset);
+      }
+    };
+  }
+
+  function openCropMenu(anchor, spec) {
+    closeCropMenu();
+    if (!spec) return;
+    const focus = spec.read();
     const menu = document.createElement("div");
     menu.id = "crop-menu";
     menu.className = "crop-menu";
@@ -1142,7 +1240,7 @@
     head.textContent = t("tool.crop");
     const stage = document.createElement("div");
     stage.className = "crop-stage";
-    const box = board.plate.querySelector(".region-image");
+    const box = spec.box();
     const boxRect = box ? box.getBoundingClientRect() : { width: 3, height: 4 };
     const ratio = boxRect.width / Math.max(1, boxRect.height);
     const max = 280;
@@ -1155,7 +1253,7 @@
     }
     const img = document.createElement("img");
     img.alt = "";
-    const liveImg = board.plate.querySelector(".region-image img");
+    const liveImg = spec.image();
     if (liveImg && liveImg.getAttribute("src")) img.src = liveImg.getAttribute("src");
     else stage.classList.add("is-empty");
     const grid = document.createElement("div");
@@ -1207,16 +1305,16 @@
       img.style.transform = point.scale > 1.001 ? "scale(" + point.scale + ")" : "";
       zoomNum.textContent = Math.round(point.scale * 100) + "%";
       range.value = String(Math.round(point.scale * 100));
-      paintFocus(board.plate, point);
+      if (spec.paint) spec.paint(point);
     }
     function apply(x, y, scale) {
-      paint(writeFocus(board.item, board.layout, x, y, scale));
+      paint(spec.write(x, y, scale));
     }
     paint(focus);
     stage.addEventListener("pointerdown", (event) => {
       if (event.button !== 0) return;
       event.preventDefault();
-      const start = readFocus(board.item, board.layout);
+      const start = spec.read();
       const rect = stage.getBoundingClientRect();
       const px = event.clientX;
       const py = event.clientY;
@@ -1240,13 +1338,13 @@
     });
     stage.addEventListener("wheel", (event) => {
       event.preventDefault();
-      const current = readFocus(board.item, board.layout);
+      const current = spec.read();
       const next = current.scale + (event.deltaY < 0 ? 0.08 : -0.08);
       apply(current.x, current.y, next);
       scheduleSave();
     }, { passive: false });
     range.addEventListener("input", () => {
-      const current = readFocus(board.item, board.layout);
+      const current = spec.read();
       apply(current.x, current.y, Number(range.value) / 100);
       scheduleSave();
     });
@@ -1288,7 +1386,7 @@
     crop.addEventListener("click", (event) => {
       event.stopPropagation();
       if (document.getElementById("crop-menu")) closeCropMenu();
-      else openCropMenu(crop);
+      else openCropMenu(crop, imageCropSpec());
     });
     bar.append(crop, toolSep());
   }
@@ -1694,10 +1792,11 @@
         const img = document.createElement("img");
         img.src = src;
         img.alt = "";
+        Catalog.frameImage(img, { x: site.visualFocusX, y: site.visualFocusY, scale: site.visualFocusScale });
         block.append(img);
       } else {
         const ph = document.createElement("div");
-        ph.className = "ph";
+        ph.className = "ph" + (site.bg ? " is-clear" : "");
         block.append(ph);
       }
     }
@@ -1708,10 +1807,14 @@
       const row = document.getElementById("visual-file-row");
       const upload = document.getElementById("visual-upload");
       const clear = document.getElementById("visual-clear");
+      const cropBtn = document.getElementById("visual-crop");
+      const fadeRow = document.getElementById("visual-opacity-row");
       if (first) first.checked = site.visualSource !== "custom";
       if (custom) custom.checked = site.visualSource === "custom";
       if (row) row.hidden = site.visualSource !== "custom";
-      if (upload) upload.textContent = site.visualImage ? "更换图片" : "上传图片";
+      if (upload) upload.textContent = site.visualImage ? t("btn.replaceImage") : t("btn.uploadImage");
+      if (cropBtn) cropBtn.hidden = !site.visualImage;
+      if (fadeRow) fadeRow.hidden = site.visualSource !== "custom" || !site.visualImage;
       if (clear) clear.hidden = !site.visualImage;
       refreshVisual();
       scheduleSave();
@@ -1729,6 +1832,11 @@
         if (!file) return;
         site.visualImage = await storeBlob(file, assetExt(file.name));
         site.visualSource = "custom";
+        site.visualFocusX = 50;
+        site.visualFocusY = 50;
+        site.visualFocusScale = 1;
+        const region = site.page.regions.find((entry) => entry.id === "visual");
+        if (region && num(region.opacity, 100) <= 0) region.opacity = 100;
         await gcAssets();
         scheduleSave();
         paintHome();
@@ -1740,6 +1848,29 @@
           await gcAssets();
           scheduleSave();
           paintHome();
+        });
+      }
+      const visualCrop = document.getElementById("visual-crop");
+      if (visualCrop) {
+        visualCrop.addEventListener("click", (event) => {
+          event.stopPropagation();
+          if (document.getElementById("crop-menu")) closeCropMenu();
+          else openCropMenu(visualCrop, visualCropSpec());
+        });
+      }
+      const visualFade = document.getElementById("visual-opacity");
+      if (visualFade) {
+        visualFade.addEventListener("input", () => {
+          const region = site.page.regions.find((entry) => entry.id === "visual");
+          if (!region) return;
+          region.opacity = Number(visualFade.value);
+          const numNode = document.getElementById("visual-opacity-num");
+          if (numNode) numNode.textContent = visualFade.value;
+          const node = document.querySelector("#look-host .page-visual");
+          if (node) Catalog.paintRegion(node, region);
+          const hit = document.querySelector('#look-host [data-hit="visual"]');
+          if (hit) hit.classList.toggle("is-quiet", region.opacity <= 0);
+          scheduleSave();
         });
       }
     }
@@ -1807,6 +1938,10 @@
       event.target.value = "";
       if (!file) return;
       site.bg = await storeBlob(file, assetExt(file.name));
+      site.bgFocusX = 50;
+      site.bgFocusY = 50;
+      site.bgFocusScale = 1;
+      if (!Number.isFinite(Number(site.bgOpacity))) site.bgOpacity = 100;
       await gcAssets();
       scheduleSave();
       paintHome();
@@ -1818,6 +1953,25 @@
         await gcAssets();
         scheduleSave();
         paintHome();
+      });
+    }
+    const bgCrop = document.getElementById("bg-crop");
+    if (bgCrop) {
+      bgCrop.addEventListener("click", (event) => {
+        event.stopPropagation();
+        if (document.getElementById("crop-menu")) closeCropMenu();
+        else openCropMenu(bgCrop, bgCropSpec());
+      });
+    }
+    const bgFade = document.getElementById("bg-opacity");
+    if (bgFade) {
+      bgFade.addEventListener("input", () => {
+        site.bgOpacity = Number(bgFade.value);
+        const numNode = document.getElementById("bg-opacity-num");
+        if (numNode) numNode.textContent = bgFade.value;
+        const head = document.querySelector("#look-host .page-head");
+        if (head) Catalog.applyPageSkin(head, state.project, resolveAsset);
+        scheduleSave();
       });
     }
     for (const button of document.querySelectorAll("[data-flow]")) {
@@ -2109,6 +2263,7 @@
           (state.project.items.length
             ? '<label class="field"><span class="field-label">' + t("label.detailPick") + '</span><select id="detail-pick">' + options + "</select></label>"
             : '<p class="hint">' + t("detail.none") + "</p>") +
+          '<label class="check"><input type="checkbox" id="detail-pager"' + (state.project.site.detailPager ? " checked" : "") + ">" + t("check.detailPager") + "</label>" +
         "</section>" +
       "</div>";
     document.getElementById("stage").innerHTML = '<div class="light-table" id="look-table"><div id="look-host"></div></div>';
@@ -2153,7 +2308,7 @@
       });
     };
     if (state.tool === "move") stage.classList.add("tool-move");
-    const stacked = layout.regions.slice().sort((a, b) => (a.z || 1) - (b.z || 1));
+    const stacked = layout.regions.filter((region) => region.id !== "pager" || state.project.site.detailPager).slice().sort((a, b) => (a.z || 1) - (b.z || 1));
     for (const region of stacked) {
       const hit = document.createElement("div");
       hit.className = "hit" + (region.id === state.regionId ? " is-selected" : "") + (num(region.opacity, 100) <= 0 ? " is-quiet" : "");
@@ -2174,17 +2329,29 @@
       bindHit(hit, grip, region, stage, layout, api);
     }
     state.board = api;
-    selectRegion(layout.regions.some((region) => region.id === state.regionId) ? state.regionId : "shot");
+    const visible = stacked.some((region) => region.id === state.regionId);
+    selectRegion(visible ? state.regionId : "shot");
     applyZoom();
   }
 
   function bindDetail() {
     const pick = document.getElementById("detail-pick");
-    if (!pick) return;
-    pick.addEventListener("change", () => {
-      state.detailPreviewId = pick.value || null;
-      paintDetail();
-    });
+    if (pick) {
+      pick.addEventListener("change", () => {
+        state.detailPreviewId = pick.value || null;
+        paintDetail();
+      });
+    }
+    const pager = document.getElementById("detail-pager");
+    if (pager) {
+      pager.addEventListener("change", () => {
+        state.project.site.detailPager = pager.checked;
+        state.project.site.detail = sanitizeDetail(state.project.site.detail);
+        if (pager.checked) state.regionId = "pager";
+        scheduleSave();
+        paintDetail();
+      });
+    }
   }
 
   function detailHud(region) {
@@ -3399,7 +3566,7 @@
   function applyZoom() {
     const node = document.querySelector("#look-host .board-column, #look-host .page-column, #look-host .detail-column, #item-board .board-column");
     if (node) {
-      node.style.transform = "scale(" + state.zoom + ")";
+      node.style.transform = "translate(" + state.panX + "px," + state.panY + "px) scale(" + state.zoom + ")";
       node.style.transformOrigin = "center center";
     }
     const canvas = node && node.closest(".light-table, .item-board");
@@ -3412,11 +3579,40 @@
       chip.title = t("zoom.title");
       chip.addEventListener("click", () => {
         state.zoom = 1;
+        state.panX = 0;
+        state.panY = 0;
         applyZoom();
       });
       canvas.append(chip);
     }
     chip.textContent = Math.round(state.zoom * 100) + "%";
+  }
+
+  function bindCanvasPan() {
+    const stage = document.getElementById("stage");
+    let drag = null;
+    stage.addEventListener("pointerdown", (event) => {
+      if (event.button !== 0 || state.tab === "preview") return;
+      const table = event.target.closest(".light-table, .item-board");
+      if (!table) return;
+      if (event.target.closest(".hit, .grip, .float-bar, .zoom-chip, button, input, select, textarea, a, .tick")) return;
+      drag = { x: event.clientX, y: event.clientY, panX: state.panX, panY: state.panY, id: event.pointerId };
+      table.classList.add("is-panning");
+    });
+    stage.addEventListener("pointermove", (event) => {
+      if (!drag || event.pointerId !== drag.id) return;
+      state.panX = drag.panX + (event.clientX - drag.x);
+      state.panY = drag.panY + (event.clientY - drag.y);
+      applyZoom();
+    });
+    function endPan(event) {
+      if (!drag || event.pointerId !== drag.id) return;
+      drag = null;
+      const table = stage.querySelector(".is-panning");
+      if (table) table.classList.remove("is-panning");
+    }
+    stage.addEventListener("pointerup", endPan);
+    stage.addEventListener("pointercancel", endPan);
   }
 
   function onZoomWheel(event) {
@@ -3441,6 +3637,14 @@
     for (const button of document.querySelectorAll("[data-tab-btn]")) {
       button.addEventListener("click", () => showTab(button.dataset.tabBtn));
     }
+    document.getElementById("open-panel").addEventListener("click", () => {
+      setDrawer(document.body.classList.contains("panel-open") ? "" : "panel");
+    });
+    document.getElementById("open-tools").addEventListener("click", () => {
+      setDrawer(document.body.classList.contains("tools-open") ? "" : "tools");
+    });
+    document.getElementById("drawer-scrim").addEventListener("click", () => setDrawer(""));
+    bindCanvasPan();
     document.getElementById("export-site").addEventListener("click", () => exportSite().catch((err) => toast(err.message || t("toast.exportFail"))));
     document.getElementById("open-help").addEventListener("click", () => openGuide(0, "help"));
     document.getElementById("open-guide").addEventListener("click", () => openGuide(0, "deploy"));

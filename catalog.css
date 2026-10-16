@@ -44,22 +44,31 @@
 
 .page-bg {
   position: absolute;
-  inset: 0;
-  z-index: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 1;
   overflow: hidden;
   pointer-events: none;
 }
 .page-bg img {
+  position: absolute;
+  top: 0;
+  left: 0;
   display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
-.page-bg.is-blur img { transform: scale(1.14); filter: blur(18px); }
+.page-bg.is-blur img { filter: blur(18px); }
 .page-bg.is-dark::after {
   content: "";
   position: absolute;
-  inset: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
   background: rgba(10, 14, 20, 0.46);
 }
 
@@ -107,6 +116,7 @@
 
 .page-visual img { object-fit: cover; }
 
+.page-visual .ph.is-clear { background: none; }
 .page-visual .ph {
   background-color: color-mix(in srgb, var(--ink) 6%, var(--paper));
   background-image:
@@ -380,8 +390,8 @@ button.card-link {
   align-items: flex-end;
   padding: 0 0.45em 0.12em;
   font-family: "ZCOOL XiaoWei", "Songti SC", "SimSun", serif;
-  font-size: 18px;
-  font-size: clamp(14px, 7cqw, 34px);
+  font-size: 16px;
+  font-size: clamp(13px, 4.6cqw, 26px);
   line-height: 1.15;
   letter-spacing: 0.03em;
 }
@@ -399,8 +409,8 @@ button.card-link {
 
 .region-body {
   padding: 0.15em 0.55em;
-  font-size: 13px;
-  font-size: clamp(11px, 3.3cqw, 17px);
+  font-size: 12px;
+  font-size: clamp(11px, 2.6cqw, 15px);
   line-height: 1.45;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -489,6 +499,10 @@ button.card-link {
 }
 
 .detail-back .back { margin: 0; }
+.detail-pager .pager-row { display: flex; width: 100%; }
+.detail-pager .pager-row button { flex: 1 1 auto; font: inherit; }
+.detail-pager .pager-row button + button { margin-left: 8px; }
+.detail-pager .pager-row button:disabled { opacity: 0.38; cursor: default; }
 
 .thumbs { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 .thumbs button {
@@ -632,6 +646,7 @@ button.card-link {
   .detail-title { order: 3; font-size: clamp(32px, 9cqi, 48px); }
   .detail-fields { order: 4; }
   .detail-body { order: 5; }
+  .detail-pager { order: 6; }
 }
 
 @media (max-width: 800px) {
@@ -685,6 +700,7 @@ button.card-link {
   .catalog .detail-title { order: 3; font-size: clamp(32px, 9cqi, 48px); }
   .catalog .detail-fields { order: 4; }
   .catalog .detail-body { order: 5; }
+  .catalog .detail-pager { order: 6; }
 }
 
 @keyframes rise-in {
