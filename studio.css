@@ -469,6 +469,14 @@ body[data-tab="preview"] .stage {
 .check { display: flex; gap: 8px; align-items: flex-start; margin-top: 14px; font-size: 14px; line-height: 1.45; }
 .check input { margin-top: 3px; }
 
+.edge-toggle,
+.drawer-scrim {
+  display: none !important;
+  position: fixed;
+  width: max-content;
+  flex: none;
+}
+
 .light-table,
 .item-board {
   position: relative;
@@ -911,15 +919,128 @@ body[data-tab="detail"] #look-host { width: min(1080px, 100%); }
   .item-board { padding: 72px 16px 40px; }
 }
 @media (max-width: 780px) {
-  .topbar { height: auto; flex-wrap: wrap; padding: 10px; gap: 8px; }
-  .save-state { display: none; }
-  body[data-tab="cabinet"] .work,
-  body[data-tab="home"] .work {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: minmax(0, 42%) minmax(0, 1fr);
+  .topbar {
+    flex-wrap: nowrap;
+    align-items: center;
+    padding: 8px 10px;
+    gap: 8px;
   }
-  .panel { border-right: 0; border-bottom: 1px solid #b7c3ce; }
+  .mark em,
+  .save-state,
+  .spacer { display: none; }
+  .mark-icon { width: 28px; height: 28px; }
+  .mark strong { font-size: 18px; letter-spacing: 0.04em; }
+  .tabs {
+    flex: 1;
+    min-width: 0;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+  }
+  .tabs button { white-space: nowrap; flex: none; padding: 6px 8px; }
+  .top-actions {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 28;
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding: 8px 8px calc(8px + env(safe-area-inset-bottom, 0px));
+    background: #ffffff;
+    border-top: 1px solid var(--line);
+    box-shadow: 0 -4px 16px rgba(20, 28, 36, 0.06);
+  }
+  .top-actions .btn,
+  .top-actions .btn-export {
+    flex: none;
+    white-space: nowrap;
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+  .work { padding-bottom: 54px; }
+  .work,
+  body[data-tab="cabinet"] .work,
+  body[data-tab="home"] .work,
+  body[data-tab="detail"] .work {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+  }
+  .panel {
+    position: fixed;
+    z-index: 24;
+    top: 0;
+    left: 0;
+    bottom: 54px;
+    width: min(320px, 86vw);
+    transform: translateX(-105%);
+    border-right: 1px solid #b7c3ce;
+    border-bottom: 0;
+    box-shadow: 8px 0 24px rgba(20, 28, 36, 0.12);
+  }
+  body.panel-open .panel { transform: translateX(0); }
+  .edge-toggle:not([hidden]) {
+    display: block !important;
+    position: fixed;
+    z-index: 27;
+    top: 46%;
+    width: max-content;
+    flex: none;
+    border: 1px solid var(--line);
+    background: #ffffff;
+    color: #1b2430;
+    font: inherit;
+    font-size: 13px;
+    padding: 10px 8px;
+    writing-mode: vertical-rl;
+    letter-spacing: 0.12em;
+    box-shadow: var(--shade);
+  }
+  .edge-panel { left: 0; border-radius: 0 10px 10px 0; }
+  .edge-tools { right: 0; border-radius: 10px 0 0 10px; }
+  body[data-tab="content"] .edge-panel,
+  body[data-tab="preview"] .edge-panel,
+  body[data-tab="preview"] .edge-tools { display: none !important; }
+  .drawer-scrim:not([hidden]) {
+    display: block !important;
+    position: fixed;
+    inset: 0;
+    z-index: 23;
+    border: 0;
+    background: rgba(20, 28, 36, 0.28);
+  }
+  .float-bar {
+    position: fixed;
+    top: 64px;
+    right: 0;
+    bottom: 62px;
+    left: auto;
+    z-index: 26;
+    width: min(300px, calc(100vw - 36px));
+    max-width: none;
+    transform: translateX(110%);
+    flex-direction: column;
+    align-items: stretch;
+    overflow: auto;
+    padding: 10px;
+  }
+  body.tools-open .float-bar { transform: none; }
+  .float-bar .tool-slide { width: 100%; }
+  .float-bar .tool-slide input[type="range"] { flex: 1; width: auto; }
+  .float-bar,
+  .panel,
+  .top-actions,
+  .tabs { touch-action: auto; }
+  .light-table,
+  .item-board { touch-action: none; cursor: grab; }
+  .light-table.is-panning,
+  .item-board.is-panning { cursor: grabbing; }
+  .zoom-chip { bottom: 64px; }
+  .toast { bottom: 72px; }
   .item-list { border-right: 0; }
+  .region-title { font-size: 15px; font-size: clamp(12px, 4cqw, 18px); }
+  .region-body { font-size: 12px; font-size: clamp(11px, 2.4cqw, 14px); }
+  .region-fields { font-size: 11px; font-size: clamp(10px, 2.2cqw, 13px); }
 }
 @keyframes rise-in {
   from { opacity: 0; translate: 0 8px; }

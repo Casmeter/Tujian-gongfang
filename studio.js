@@ -883,8 +883,8 @@
         '<header><strong id="tip-title"></strong><button type="button" class="btn-quiet" id="tip-close"></button></header>' +
         '<div class="guide-body"><p id="tip-copy"></p><a class="btn-export" id="tip-link" target="_blank" rel="noopener noreferrer"></a><p class="tip-url" id="tip-url"></p></div>' +
       "</div></div>" +
-      '<button type="button" class="edge-toggle edge-panel" id="open-panel" aria-expanded="false"></button>' +
-      '<button type="button" class="edge-toggle edge-tools" id="open-tools" aria-expanded="false"></button>' +
+      '<button type="button" class="edge-toggle edge-panel" id="open-panel" aria-expanded="false" hidden></button>' +
+      '<button type="button" class="edge-toggle edge-tools" id="open-tools" aria-expanded="false" hidden></button>' +
       '<button type="button" class="drawer-scrim" id="drawer-scrim" hidden></button>' +
       '<input type="file" id="file-images" accept="image/*" multiple hidden>' +
       '<input type="file" id="file-csv" accept=".csv,text/csv" hidden>' +
@@ -965,6 +965,17 @@
     else if (tab === "content") paintContent();
     else if (tab === "detail") paintDetail();
     else paintPreview();
+    syncEdgeButtons();
+  }
+
+  function syncEdgeButtons() {
+    const narrow = window.matchMedia("(max-width: 780px)").matches;
+    const tab = state.tab;
+    const panel = document.getElementById("open-panel");
+    const tools = document.getElementById("open-tools");
+    if (panel) panel.hidden = !narrow || tab === "content" || tab === "preview";
+    if (tools) tools.hidden = !narrow || tab === "preview";
+    if (!narrow) setDrawer("");
   }
 
   function fieldOptions(selected) {
@@ -3644,6 +3655,8 @@
       setDrawer(document.body.classList.contains("tools-open") ? "" : "tools");
     });
     document.getElementById("drawer-scrim").addEventListener("click", () => setDrawer(""));
+    syncEdgeButtons();
+    window.addEventListener("resize", syncEdgeButtons);
     bindCanvasPan();
     document.getElementById("export-site").addEventListener("click", () => exportSite().catch((err) => toast(err.message || t("toast.exportFail"))));
     document.getElementById("open-help").addEventListener("click", () => openGuide(0, "help"));
