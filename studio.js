@@ -119,6 +119,14 @@
     { id: "visual", label: "主视觉" }
   ];
 
+  const DETAIL_META = [
+    { id: "shot" },
+    { id: "back" },
+    { id: "title" },
+    { id: "fields" },
+    { id: "body" }
+  ];
+
   const PAGE_PRESETS = {
     center: {
       label: "居中开场",
@@ -228,6 +236,7 @@
     selectedId: null,
     previewId: null,
     previewDevice: "desk",
+    detailPreviewId: null,
     regionId: "image",
     cardPreset: "",
     homePreset: "",
@@ -330,7 +339,7 @@
     ["mashan", "马善政"],
     ["longcang", "龙藏体"]
   ];
-  const TEXT_IDS = { brand: 1, hero: 1, lead: 1, title: 1, fields: 1, body: 1, extra1: 1, extra2: 1, extra3: 1 };
+  const TEXT_IDS = { brand: 1, hero: 1, lead: 1, title: 1, fields: 1, body: 1, extra1: 1, extra2: 1, extra3: 1, back: 1 };
   const SHAPE_RATIO = { portrait: 0.75, square: 1, landscape: 1.333 };
   const FONT_HREF = "https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Long+Cang&family=Ma+Shan+Zheng&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@500;700&family=ZCOOL+KuaiLe&family=ZCOOL+QingKe+HuangYou&family=ZCOOL+XiaoWei&display=swap";
 
@@ -386,6 +395,49 @@
         const min = mins[meta.id];
         const w = clamp(num(region.w, 40), min[0], 100);
         const h = clamp(num(region.h, 20), min[1], 100);
+        const x = clamp(num(region.x, 0), 0, 100 - min[0]);
+        const y = clamp(num(region.y, 0), 0, 100 - min[1]);
+        return {
+          id: meta.id,
+          x: Math.min(x, 100 - w),
+          y: Math.min(y, 100 - h),
+          w: Math.min(w, 100 - x),
+          h: Math.min(h, 100 - y),
+          z: num(region.z, 1),
+          ...styleFields(region),
+          font: FONT_KEYS.includes(region.font) ? region.font : "",
+          align: region.align === "right" ? "right" : region.align === "center" ? "center" : "left"
+        };
+      })
+    };
+  }
+
+  function detailDefaults() {
+    return {
+      regions: [
+        { id: "shot", x: 0, y: 0, w: 46, h: 96, z: 1, align: "left" },
+        { id: "back", x: 52, y: 0, w: 22, h: 8, z: 4, align: "left" },
+        { id: "title", x: 52, y: 12, w: 46, h: 16, z: 3, align: "left" },
+        { id: "fields", x: 52, y: 30, w: 42, h: 20, z: 2, align: "left" },
+        { id: "body", x: 52, y: 52, w: 46, h: 36, z: 2, align: "left" }
+      ]
+    };
+  }
+
+  function sanitizeDetail(detail) {
+    const fallback = detailDefaults();
+    const raw = detail && Array.isArray(detail.regions) ? detail.regions : [];
+    const byId = new Map();
+    for (const region of raw) {
+      if (region && region.id) byId.set(region.id, region);
+    }
+    const mins = { shot: [18, 20], back: [12, 6], title: [16, 8], fields: [16, 8], body: [16, 10] };
+    return {
+      regions: DETAIL_META.map((meta) => {
+        const region = byId.get(meta.id) || fallback.regions.find((entry) => entry.id === meta.id);
+        const min = mins[meta.id];
+        const w = clamp(num(region.w, 40), min[0], 100);
+        const h = clamp(num(region.h, 16), min[1], 100);
         const x = clamp(num(region.x, 0), 0, 100 - min[0]);
         const y = clamp(num(region.y, 0), 0, 100 - min[1]);
         return {
@@ -511,7 +563,8 @@
         orderField: "年份",
         credit: true,
         layout: sanitizeLayout(layoutFromPreset("stack")),
-        page: pageFromPreset("center")
+        page: pageFromPreset("center"),
+        detail: detailDefaults()
       },
       fields: [{ name: "分组" }, { name: "年份" }],
       items: []
@@ -580,6 +633,7 @@
     project.site.credit = site.credit !== false;
     project.site.layout = sanitizeLayout(site.layout);
     project.site.page = sanitizePage(site.page);
+    project.site.detail = sanitizeDetail(site.detail);
     if (Array.isArray(raw.fields) && raw.fields.length) {
       const names = [];
       for (const field of raw.fields) {
@@ -783,20 +837,19 @@
           '<button type="button" data-tab-btn="cabinet" role="tab"></button>' +
           '<button type="button" data-tab-btn="home" role="tab"></button>' +
           '<button type="button" data-tab-btn="content" role="tab"></button>' +
+          '<button type="button" data-tab-btn="detail" role="tab"></button>' +
           '<button type="button" data-tab-btn="preview" role="tab"></button>' +
         "</div>" +
         '<div class="spacer"></div>' +
-        '<div class="top-end">' +
-          '<span class="save-state"></span>' +
-          '<div class="top-actions">' +
-            '<button type="button" class="btn" id="lang-toggle"></button>' +
-            '<button type="button" class="btn" id="open-backup"></button>' +
-            '<button type="button" class="btn" id="save-backup"></button>' +
-            '<button type="button" class="btn" id="open-help"></button>' +
-            '<button type="button" class="btn" id="open-guide"></button>' +
-            '<button type="button" class="btn" id="open-tip"></button>' +
-            '<button type="button" class="btn-export" id="export-site"></button>' +
-          "</div>" +
+        '<span class="save-state"></span>' +
+        '<div class="top-actions">' +
+          '<button type="button" class="btn" id="lang-toggle"></button>' +
+          '<button type="button" class="btn" id="open-backup"></button>' +
+          '<button type="button" class="btn" id="save-backup"></button>' +
+          '<button type="button" class="btn" id="open-help"></button>' +
+          '<button type="button" class="btn" id="open-guide"></button>' +
+          '<button type="button" class="btn" id="open-tip"></button>' +
+          '<button type="button" class="btn-export" id="export-site"></button>' +
         "</div>" +
       "</header>" +
       '<div class="work"><aside class="panel" id="panel"></aside><main class="stage" id="stage"></main></div>' +
@@ -822,7 +875,7 @@
   function applyChrome() {
     const tagline = document.getElementById("brand-tagline");
     if (tagline) tagline.textContent = t("brand.tagline");
-    const tabs = { cabinet: "tab.cabinet", home: "tab.home", content: "tab.content", preview: "tab.preview" };
+    const tabs = { cabinet: "tab.cabinet", home: "tab.home", content: "tab.content", detail: "tab.detail", preview: "tab.preview" };
     for (const id of Object.keys(tabs)) {
       const button = document.querySelector('[data-tab-btn="' + id + '"]');
       if (button) button.textContent = t(tabs[id]);
@@ -873,6 +926,7 @@
     if (tab === "cabinet") paintCabinet();
     else if (tab === "home") paintHome();
     else if (tab === "content") paintContent();
+    else if (tab === "detail") paintDetail();
     else paintPreview();
   }
 
@@ -1033,7 +1087,7 @@
 
   function setTool(tool) {
     state.tool = tool === "move" || tool === "crop" ? tool : "select";
-    for (const node of document.querySelectorAll(".plate.editing, .plate.crop-only, .page-head.editing")) {
+    for (const node of document.querySelectorAll(".plate.editing, .plate.crop-only, .page-head.editing, .detail-stage.editing")) {
       node.classList.toggle("tool-move", state.tool === "move");
       node.classList.toggle("tool-crop", state.tool === "crop");
     }
@@ -1354,7 +1408,9 @@
   }
 
   function fontSizeControl(region, plate) {
-    const fallback = { hero: 64, brand: 18, lead: 18, title: 22, fields: 13, body: 14, extra1: 14, extra2: 14, extra3: 14 }[region.id] || 16;
+    const cardSize = { hero: 64, brand: 18, lead: 18, title: 22, fields: 13, body: 14, extra1: 14, extra2: 14, extra3: 14, back: 14 };
+    const detailSize = { title: 48, fields: 16, body: 16, back: 14 };
+    const fallback = (state.tab === "detail" && detailSize[region.id]) || cardSize[region.id] || 16;
     const saved = Number(region.fontSize);
     const wrap = document.createElement("label");
     wrap.className = "tool-slide";
@@ -2035,6 +2091,104 @@
     state.board = api;
     selectRegion(layout.regions.some((region) => region.id === state.regionId) ? state.regionId : "hero");
     applyZoom();
+  }
+
+  function detailItem() {
+    return state.project.items.find((item) => item.id === state.detailPreviewId) || state.project.items[0] || null;
+  }
+
+  function paintDetail() {
+    const item = detailItem();
+    const options = state.project.items.map((entry) =>
+      '<option value="' + escapeAttr(entry.id) + '"' + (item && entry.id === item.id ? " selected" : "") + ">" + escapeHtml(entry.title || "未命名") + "</option>"
+    ).join("");
+    document.getElementById("panel").innerHTML =
+      '<div class="control">' +
+        '<section class="slab"><h2>' + t("h.detail") + "</h2>" +
+          '<p class="hint">' + t("hint.detail") + "</p>" +
+          (state.project.items.length
+            ? '<label class="field"><span class="field-label">' + t("label.detailPick") + '</span><select id="detail-pick">' + options + "</select></label>"
+            : '<p class="hint">' + t("detail.none") + "</p>") +
+        "</section>" +
+      "</div>";
+    document.getElementById("stage").innerHTML = '<div class="light-table" id="look-table"><div id="look-host"></div></div>';
+    mountDetailBoard(document.getElementById("look-host"));
+    bindDetail();
+  }
+
+  function mountDetailBoard(host) {
+    host.replaceChildren();
+    const layout = state.project.site.detail;
+    const item = detailItem() || placeholderItem();
+    const column = document.createElement("div");
+    column.className = "detail-column";
+    const stage = Catalog.renderDetail(state.project, item, resolveAsset, { edit: true, isolate: true });
+    column.append(stage);
+    host.append(column);
+    const canvas = canvasOf(host);
+    const hud = floatReadout(canvas);
+    const api = {
+      plate: stage,
+      layout: layout,
+      place: (region) => placeRegion(stage, region),
+      hud: (region) => { hud.textContent = detailHud(region); },
+      overlap: () => {},
+      select: (id) => selectRegion(id),
+      fillTools: () => {}
+    };
+    function selectRegion(id) {
+      state.regionId = id || "";
+      for (const hit of stage.querySelectorAll(".hit")) {
+        hit.classList.toggle("is-selected", hit.dataset.hit === state.regionId);
+      }
+      const region = layout.regions.find((entry) => entry.id === state.regionId);
+      hud.textContent = region ? detailHud(region) : t("hud.none");
+      api.fillTools();
+    }
+    api.fillTools = () => {
+      if (state.tool === "crop") state.tool = "select";
+      mountTools(canvas, (bar) => {
+        appendModes(bar);
+        appendInspector(bar, stage, layout, DETAIL_META);
+      });
+    };
+    if (state.tool === "move") stage.classList.add("tool-move");
+    const stacked = layout.regions.slice().sort((a, b) => (a.z || 1) - (b.z || 1));
+    for (const region of stacked) {
+      const hit = document.createElement("div");
+      hit.className = "hit" + (region.id === state.regionId ? " is-selected" : "") + (num(region.opacity, 100) <= 0 ? " is-quiet" : "");
+      hit.dataset.hit = region.id;
+      hit.style.left = region.x + "%";
+      hit.style.top = region.y + "%";
+      hit.style.width = region.w + "%";
+      hit.style.height = region.h + "%";
+      hit.style.zIndex = String(30 + (region.z || 1));
+      const tag = document.createElement("span");
+      tag.className = "tag";
+      tag.textContent = regionLabel(region.id);
+      const grip = document.createElement("b");
+      grip.className = "grip";
+      grip.title = t("tool.resize");
+      hit.append(tag, grip);
+      stage.append(hit);
+      bindHit(hit, grip, region, stage, layout, api);
+    }
+    state.board = api;
+    selectRegion(layout.regions.some((region) => region.id === state.regionId) ? state.regionId : "shot");
+    applyZoom();
+  }
+
+  function bindDetail() {
+    const pick = document.getElementById("detail-pick");
+    if (!pick) return;
+    pick.addEventListener("change", () => {
+      state.detailPreviewId = pick.value || null;
+      paintDetail();
+    });
+  }
+
+  function detailHud(region) {
+    return regionLabel(region.id) + "  " + region.x + ", " + region.y + "  ·  " + region.w + " × " + region.h;
   }
 
   function pageHud(region) {
@@ -3243,7 +3397,7 @@
   }
 
   function applyZoom() {
-    const node = document.querySelector("#look-host .board-column, #look-host .page-column, #item-board .board-column");
+    const node = document.querySelector("#look-host .board-column, #look-host .page-column, #look-host .detail-column, #item-board .board-column");
     if (node) {
       node.style.transform = "scale(" + state.zoom + ")";
       node.style.transformOrigin = "center center";

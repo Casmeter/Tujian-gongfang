@@ -59,7 +59,7 @@
     mashan: '"Ma Shan Zheng", "KaiTi", cursive',
     longcang: '"Long Cang", "KaiTi", cursive'
   };
-  const TYPE_DEFAULT = { brand: "sans", hero: "xiaowei", lead: "sans", title: "xiaowei", fields: "sans", body: "sans" };
+  const TYPE_DEFAULT = { brand: "sans", hero: "xiaowei", lead: "sans", title: "xiaowei", fields: "sans", body: "sans", back: "sans" };
 
   function paintRegion(node, region) {
     const opacity = regionOpacity(region);
@@ -584,20 +584,41 @@
     return view;
   }
 
+  function detailRegions(project) {
+    const defaults = [
+      { id: "shot", x: 0, y: 0, w: 46, h: 96, z: 1, align: "left" },
+      { id: "back", x: 52, y: 0, w: 22, h: 8, z: 4, align: "left" },
+      { id: "title", x: 52, y: 12, w: 46, h: 16, z: 3, align: "left" },
+      { id: "fields", x: 52, y: 30, w: 42, h: 20, z: 2, align: "left" },
+      { id: "body", x: 52, y: 52, w: 46, h: 36, z: 2, align: "left" }
+    ];
+    const raw = project.site && project.site.detail && project.site.detail.regions;
+    const list = Array.isArray(raw) ? raw : [];
+    return defaults.map((fallback) => {
+      const found = list.find((region) => region && region.id === fallback.id);
+      return found ? Object.assign({}, fallback, found) : fallback;
+    });
+  }
+
   function renderDetail(project, item, resolve, opts) {
+    opts = opts || {};
+    const stage = el("div", { class: "detail detail-stage" + (opts.edit ? " editing" : "") });
+    applyVars(stage, project);
     const shots = pictures(item);
     let current = shots[0] || "";
     const photo = el("img", { alt: item.title || "未命名" });
-    const shot = el("div", { class: "card frame-" + project.site.frame + " detail-shot" });
-    applyVars(shot, project);
-    paintFrame(shot, project, resolve);
+    const photoWrap = el("div", { class: "card detail-photo frame-" + (project.site.frame || "glass") });
+    paintFrame(photoWrap, project, resolve);
     if (current) {
       photo.src = resolve(current);
-      shot.append(photo);
+      photoWrap.append(photo);
+    } else if (opts.edit) {
+      photoWrap.append(el("div", { class: "ph", "aria-hidden": "true" }));
     }
     const thumbs = el("div", { class: "thumbs" });
     function show(name) {
       current = name;
+      if (!photo.isConnected) photoWrap.replaceChildren(photo);
       photo.src = resolve(name);
       for (const button of thumbs.querySelectorAll("button")) {
         button.setAttribute("aria-current", button.dataset.src === name ? "true" : "false");
@@ -610,33 +631,53 @@
       thumbs.append(button);
     }
     if (current) show(current);
-    const specs = el("div", { class: "specs" });
-    for (const field of project.fields) {
-      const value = String(item.fields?.[field.name] ?? "").trim();
-      if (!value) continue;
-      specs.append(el("div", {}, [
-        el("dt", { text: field.name }),
-        el("dd", { text: value })
-      ]));
-    }
     const back = el("button", { class: "back", type: "button", text: "返回主页" });
     back.addEventListener("click", () => {
+      if (opts.edit) return;
       if (opts.isolate) opts.onNavigate && opts.onNavigate(null);
       else location.hash = "#/";
     });
-    const copy = el("div", { class: "detail-copy" }, [
-      back,
-      el("h1", { text: item.title || "未命名" }),
-      specs.childNodes.length ? specs : null,
-      item.body ? el("p", { class: "prose", text: item.body }) : null
-    ]);
-    for (const id of ["extra1", "extra2", "extra3"]) {
-      if (!project.site.extras || !project.site.extras[id]) continue;
-      const note = String((item.notes && item.notes[id]) || "").trim();
-      if (note) copy.append(el("p", { class: "prose", text: note }));
+    for (const region of detailRegions(project)) {
+      const align = region.align === "center" ? " align-center" : region.align === "right" ? " align-right" : "";
+      const block = el("div", {
+        class: "detail-block detail-" + region.id + align,
+        "data-region": region.id,
+        style: "left:" + region.x + "%;top:" + region.y + "%;width:" + region.w + "%;height:" + region.h + "%;z-index:" + (region.z || 1)
+      });
+      paintRegion(block, region);
+      if (region.id === "shot") {
+        if (photoWrap.childNodes.length) block.append(photoWrap);
+        if (shots.length > 1) block.append(thumbs);
+      } else if (region.id === "back") {
+        block.append(back);
+      } else if (region.id === "title") {
+        block.append(el("h1", { text: item.title || "未命名" }));
+      } else if (region.id === "fields") {
+        const specs = el("div", { class: "specs" });
+        for (const field of project.fields || []) {
+          const value = String(item.fields?.[field.name] ?? "").trim();
+          if (!value && !opts.edit) continue;
+          specs.append(el("div", {}, [
+            el("dt", { text: field.name }),
+            el("dd", { text: value || "—" })
+          ]));
+        }
+        if (specs.childNodes.length) block.append(specs);
+      } else if (region.id === "body") {
+        const text = String(item.body || "").trim();
+        if (text || opts.edit) {
+          const note = el("p", { class: "prose" + (text ? "" : " is-placeholder"), text: text || "简介" });
+          block.append(note);
+        }
+        for (const id of ["extra1", "extra2", "extra3"]) {
+          if (!project.site.extras || !project.site.extras[id]) continue;
+          const extra = String((item.notes && item.notes[id]) || "").trim();
+          if (extra) block.append(el("p", { class: "prose", text: extra }));
+        }
+      }
+      stage.append(block);
     }
-    const visual = el("div", {}, [shots.length ? shot : null, shots.length > 1 ? thumbs : null]);
-    return el("div", { class: "detail" }, [visual, copy]);
+    return stage;
   }
 
   function render(rootNode, project, opts) {
@@ -713,6 +754,7 @@
     render: render,
     buildCard: buildCard,
     buildChrome: buildChrome,
+    renderDetail: renderDetail,
     fieldLine: fieldLine,
     overlapsImage: overlapsImage,
     paintRegion: paintRegion,
